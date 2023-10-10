@@ -6,40 +6,68 @@ export async function main(ns) {
   ns.enableLog("print");
   ns.tail('scpHack.js');
 
+  var serverScript = ns.args[0];
+  var reserveRam = 31;
   var loops = 0;
 
   while (true) {
-    /*******Get a list of all the servers*******/
+    /********************************************************************************************************************************************
+                                                             Get a list of all the servers
+    *********************************************************************************************************************************************/
     var serList = help.serverList(ns);
-    /*******crack all servers we can*******/
+    /********************************************************************************************************************************************
+                                                             Buy all available programs
+    *********************************************************************************************************************************************/
+    await help.buyPrograms(ns);
+    /********************************************************************************************************************************************
+                                                             crack all servers we can
+    *********************************************************************************************************************************************/
     help.openNodes(ns);
     ns.print("Applied Cracks to all Servers");
-    /*******Nuke all servers we can*******/
+    /********************************************************************************************************************************************
+                                                             Nuke all servers we can
+    *********************************************************************************************************************************************/
     help.nukeAll(ns);
     ns.print("Nuked all Servers");
-    /*******copy the hack script to all available servers*******/
+    /********************************************************************************************************************************************
+                                                 copy the hack script to all available servers
+    *********************************************************************************************************************************************/
     for (var x = 0; x < serList.length; x++) {
       var currentServer = serList[x];
-      await ns.scp("hack.js", currentServer);
-      /*******run as many copy of the script as you can on the server*******/
-      var threads = help.threadCount(ns, currentServer, "hack.js");
+      await ns.scp(serverScript, currentServer);
+      await ns.scp("helper.js", currentServer);
+      /********************************************************************************************************************************************
+                                              run as many copy of the script as you can on the server
+      *********************************************************************************************************************************************/
+      var threads = help.threadCount(ns, currentServer, serverScript, 0);
       if (threads > 0) {
         if (help.canWeHack(ns, currentServer) == true) {
-          ns.exec("hack.js", currentServer, threads);
+          ns.exec(serverScript, currentServer, threads);
         }
       }
     }
-    ns.print("Hack running on all Servers");
-    /*******grow or weaken each server*******/
-
-    var threadsGrow = help.threadCount(ns, "home", "grow.js");
+    ns.print(serverScript + " running on all Servers");
+    /********************************************************************************************************************************************
+                                                          grow or weaken each server
+    *********************************************************************************************************************************************/
+    var script = "grow.js";
+    //var script = "weaken.js";
+    var threadsGrow = help.threadCount(ns, "home", script, reserveRam);
     if (threadsGrow > 0) {
-      ns.exec("grow.js", "home", threadsGrow);
+      ns.exec(script, "home", threadsGrow);
     }
     ns.print("Grow/Weaken run on home server");
-    /*******Log outputs*******/
+    /********************************************************************************************************************************************
+                                                                Gang stuff
+    *********************************************************************************************************************************************/
+    try { await help.doGang(ns); } catch (error) { }
+    /********************************************************************************************************************************************
+                                                                    Logs
+    *********************************************************************************************************************************************/
     loops += 1;
+    ns.print("Current Cash Available to hack: " + await help.totalCash(ns));
     ns.print(loops + " loops of script");
+    ns.print("Current Karma = " + ns.heart.break().toFixed(2));
     ns.print("Sleeping...");
     await ns.sleep(30000);
     ns.clearLog();
